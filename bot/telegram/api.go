@@ -13,47 +13,65 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const (
+	telegramAPI = "https://api.telegram.org/bot%s/%s"
+	webhookPath = "/webhook/%s/"
+)
+
 type apiResponse struct {
 	Ok          bool
 	Description string
 }
 
-// WebhookServer is a HTTP server implementing the Telegram bot webhook.
-type WebhookServer struct {
+// WebhookBot is a HTTP server implementing the Telegram bot webhook.
+type WebhookBot struct {
 	Token    string
 	BasePath string
 
 	webhookToken string
+	logic        BotLogic
+
+	updateChan  chan Update
+	messageChan chan SendMessage
 }
 
-// NewWebhookServer creates a new server.
-func NewWebhookServer(config Config) *WebhookServer {
-	ws := &WebhookServer{
-		Token:    config.Token,
-		BasePath: config.BasePath,
+// NewWebhookBot creates a new server.
+func NewWebhookBot(config Config, logic BotLogic) *WebhookBot {
+	ws := &WebhookBot{
+		Token:       config.Token,
+		BasePath:    config.BasePath,
+		logic:       logic,
+		updateChan:  make(chan Update),
+		messageChan: make(chan SendMessage),
 	}
 	ws.setWebhookToken()
+	logic.SetIncomingChannel(ws.updateChan)
+	logic.SetOutgoingChannel(ws.messageChan)
 	return ws
 }
 
 // Run runs the server. This method is long-running.
-func (ws *WebhookServer) Run() {
+func (ws *WebhookBot) Run() {
 	ws.setWebhook()
 	r := mux.NewRouter()
 	r.HandleFunc("/webhook/{webhookToken}/", ws.WebhookHandler)
 	http.Handle("/", r)
+	go ws.logic.Run()
+	go ws.sendIncomingMessages()
 	log.Fatal(http.ListenAndServe("127.0.0.1:9100", nil))
 }
 
-func (ws *WebhookServer) setWebhookToken() {
+func (ws *WebhookBot) setWebhookToken() {
 	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	dieOnError(err, "Unable to get randomness: %v")
+	if _, err := rand.Read(b); err != nil {
+		log.Fatalf("Unable to get randomness: %v", err)
+	}
+
 	ws.webhookToken = base32.StdEncoding.EncodeToString(b)
 }
 
 // Request makes a request to the Telegram API.
-func (ws *WebhookServer) Request(method string, data interface{}) error {
+func (ws *WebhookBot) Request(method string, data interface{}) error {
 	u, err := url.Parse(fmt.Sprintf(telegramAPI, ws.Token, method))
 	if err != nil {
 		log.Fatalf("Unable to create request url: %v", err)
@@ -77,7 +95,7 @@ func (ws *WebhookServer) Request(method string, data interface{}) error {
 	return nil
 }
 
-func (ws *WebhookServer) setWebhook() {
+func (ws *WebhookBot) setWebhook() {
 	d := SetWebhook{
 		URL: fmt.Sprintf(ws.BasePath+webhookPath, ws.webhookToken),
 	}
@@ -87,7 +105,7 @@ func (ws *WebhookServer) setWebhook() {
 }
 
 // WebhookHandler handles a request from the Telegram bot API.
-func (ws *WebhookServer) WebhookHandler(w http.ResponseWriter,
+func (ws *WebhookBot) WebhookHandler(w http.ResponseWriter,
 	req *http.Request) {
 	log.Printf("New request: %s", req.URL.String())
 	vars := mux.Vars(req)
@@ -106,5 +124,15 @@ func (ws *WebhookServer) WebhookHandler(w http.ResponseWriter,
 		return
 	}
 	log.Printf("%+v", update)
+	log.Printf("From: %+v", update.Message.From)
+	log.Printf("Chat: %+v", update.Message.Chat)
+
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (ws *WebhookBot) sendIncomingMessages() {
+	for {
+		m := <-ws.messageChan
+		ws.Request("sendMessage", m)
+	}
 }

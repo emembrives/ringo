@@ -107,7 +107,17 @@ type ForceReply struct {
 	Selective  bool `json:"selective"`
 }
 
-// SetWebhook is the data necessary for the setWebhook API call.
+// SetWebhook holds the data necessary for the setWebhook API call.
 type SetWebhook struct {
 	URL string `json:"url"`
+}
+
+// SendMessage holds the data necessary for the sendMessage API call.
+type SendMessage struct {
+	ChatID                int64       `json:"chat_id"`
+	Text                  string      `json:"text"`
+	ParseMode             string      `json:"parse_mode"`
+	DisableWebPagePreview string      `json:"disable_web_page_preview"`
+	ReplyToMessageID      int64       `json:"reply_to_message_id"`
+	ReplyMarkup           interface{} `json:"reply_markup"`
 }

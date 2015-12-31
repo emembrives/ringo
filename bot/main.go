@@ -16,6 +16,7 @@ var (
 
 type config struct {
 	TelegramBot telegram.Config `yaml:"telegram-bot"`
+	Ringer      RingerConfig    `yaml:"ringer"`
 }
 
 func main() {
@@ -32,6 +33,8 @@ func main() {
 		log.Fatalf("Unable to parse configuration file: %v", err)
 	}
 
-	bot := telegram.NewBot(c.TelegramBot)
+	bot := telegram.NewWebhookBot(c.TelegramBot, &Processor{
+		Config: c.Ringer,
+	})
 	bot.Run()
 }

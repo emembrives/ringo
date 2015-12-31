@@ -1,3 +1,7 @@
 telegram-bot:
   token: 1234-AAAA
   base-url: https://etienne.membrives.fr/bot
+ringer:
+  usernames:
+    - USER_ID1
+    - USER_ID2
