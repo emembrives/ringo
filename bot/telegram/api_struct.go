@@ -9,24 +9,24 @@ type Update struct {
 // Message is https://core.telegram.org/bots/api#message
 type Message struct {
 	MessageID             int64       `json:"message_id"`
-	From                  User        `json:"from"`
+	From                  *User       `json:"from"`
 	Date                  int64       `json:"date"`
-	Chat                  Chat        `json:"chat"`
-	ForwardFrom           User        `json:"forward_from"`
+	Chat                  *Chat       `json:"chat"`
+	ForwardFrom           *User       `json:"forward_from"`
 	ForwardDate           int64       `json:"forward_date"`
 	ReplyToMessage        *Message    `json:"reply_to_message"`
 	Text                  string      `json:"text"`
-	Audio                 Audio       `json:"audio"`
-	Document              Document    `json:"document"`
+	Audio                 *Audio      `json:"audio"`
+	Document              *Document   `json:"document"`
 	Photo                 []PhotoSize `json:"photo"`
-	Sticker               Sticker     `json:"sticker"`
-	Video                 Video       `json:"video"`
-	Voice                 Voice       `json:"voice"`
+	Sticker               *Sticker    `json:"sticker"`
+	Video                 *Video      `json:"video"`
+	Voice                 *Voice      `json:"voice"`
 	Caption               string      `json:"caption"`
-	Contact               Contact     `json:"contact"`
-	Location              Location    `json:"location"`
-	NewChatParticipant    User        `json:"new_chat_participant"`
-	LeftChatParticipant   User        `json:"left_chat_participant"`
+	Contact               *Contact    `json:"contact"`
+	Location              *Location   `json:"location"`
+	NewChatParticipant    *User       `json:"new_chat_participant"`
+	LeftChatParticipant   *User       `json:"left_chat_participant"`
 	NewChatTtitle         string      `json:"new_chat_title"`
 	NewChatPhoto          []PhotoSize `json:"new_chat_photo"`
 	DeleteChatPhoto       bool        `json:"delete_chat_photo"`
@@ -105,4 +105,9 @@ type ReplyKeyboardHide struct {
 type ForceReply struct {
 	ForceReply bool `json:"force_reply"`
 	Selective  bool `json:"selective"`
+}
+
+// SetWebhook is the data necessary for the setWebhook API call.
+type SetWebhook struct {
+	URL string `json:"url"`
 }

@@ -5,17 +5,17 @@ import (
 	"io/ioutil"
 	"log"
 
-  "gopkg.in/yaml.v2"
 	"github.com/emembrives/ringo/bot/telegram"
+	"gopkg.in/yaml.v2"
 )
 
 var (
-  configPath = flag.String("config", "config.yaml",
+	configPath = flag.String("config", "config.yaml",
 		"Path to the YAML configuration file")
 )
 
 type config struct {
-	TelegramBot telegram.Config
+	TelegramBot telegram.Config `yaml:"telegram-bot"`
 }
 
 func main() {
@@ -27,8 +27,11 @@ func main() {
 	}
 
 	c := &config{}
-	yaml.Unmarshal(configData, c)
+	err = yaml.Unmarshal(configData, c)
+	if err != nil {
+		log.Fatalf("Unable to parse configuration file: %v", err)
+	}
 
 	bot := telegram.NewBot(c.TelegramBot)
-	go bot.Run()
+	bot.Run()
 }
