@@ -1,0 +1,3 @@
+telegram-bot:
+  token: 1234-AAAA
+  baseUrl: https://etienne.membrives.fr/bot
