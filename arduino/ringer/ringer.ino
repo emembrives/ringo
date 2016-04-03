@@ -57,7 +57,7 @@
     -----------------------------------------------------------------------*/
     #define FACTORYRESET_ENABLE         1
     #define MINIMUM_FIRMWARE_VERSION    "0.6.7"
-    #define URL                         "http://www.membrives.fr"
+    #define URL                         "http://etn.ovh/r"
 /*=========================================================================*/
 
 
@@ -67,6 +67,8 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 
 // A small helper
 void error(const __FlashStringHelper*err) {
+  while (!Serial);  // required for Flora & Micro
+  Serial.begin(115200);
   Serial.println(err);
   while (1);
 }
@@ -79,26 +81,16 @@ void error(const __FlashStringHelper*err) {
 /**************************************************************************/
 void setup(void)
 {
-  while (!Serial);  // required for Flora & Micro
   delay(500);
-
-  Serial.begin(115200);
-  Serial.println(F("Adafruit Bluefruit EddyStone Example"));
-  Serial.println(F("------------------------------------"));
-
-  /* Initialise the module */
-  Serial.print(F("Initialising the Bluefruit LE module: "));
 
   if ( !ble.begin(VERBOSE_MODE) )
   {
     error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
   }
-  Serial.println( F("OK!") );
 
   if ( FACTORYRESET_ENABLE )
   {
     /* Perform a factory reset to make sure everything is in a known state */
-    Serial.println(F("Performing a factory reset: "));
     if ( ! ble.factoryReset() ){
       error(F("Couldn't factory reset"));
     }
@@ -107,32 +99,21 @@ void setup(void)
   /* Disable command echo from Bluefruit */
   ble.echo(false);
 
-  Serial.println("Requesting Bluefruit info:");
-  /* Print Bluefruit information */
-  ble.info();
-
   // EddyStone commands are added from firmware 0.6.6
-  if ( !ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) )
+  if (!ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) )
   {
     error(F("EddyStone is only available from 0.6.6. Please perform firmware upgrade"));
   }
 
-  /* Set EddyStone URL beacon data */
-  Serial.println(F("Setting EddyStone-url to URL website: "));
-
-  if (! ble.sendCommandCheckOK(F( "AT+EDDYSTONEURL=" URL ))) {
+  if (!ble.sendCommandCheckOK(F( "AT+EDDYSTONEURL=" URL ))) {
     error(F("Couldnt set, is URL too long !?"));
   }
 
-  if (!       ble.sendCommandCheckOK(F("AT+EDDYSTONEENABLE=on")) ) {
+  if (!ble.sendCommandCheckOK(F("AT+EDDYSTONEENABLE=on")) ) {
     error(F("Couldnt enable Eddystone"));
   }
 
   ble.sendCommandCheckOK(F("AT+EDDYSTONEENABLE"));
-  
-  Serial.println(F("**************************************************"));
-  Serial.println(F("Please use Google Physical Web application to test"));
-  Serial.println(F("**************************************************"));
 }
 
 /**************************************************************************/
@@ -142,14 +123,25 @@ void setup(void)
 /**************************************************************************/
 void loop(void)
 {
+  delay(1000);
   if (ble.isConnected()) {
     ble.println("AT+BLEUARTRX");
     ble.readline();
-    ble.waitForOK();
+    
+    if (strcmp(ble.buffer, "OK") != 0) {
+      // Some data was found, its in the buffer
+      Serial.print(F("[Recv] "));
+      Serial.println(ble.buffer);
+      if (!ble.waitForOK()) {
+        error(F("Failed to receive"));
+      }
+    }
   
     ble.print("AT+BLEUARTTX=");
-    ble.println(ble.buffer);
-    ble.waitForOK();  
+    ble.println("ring");
+    if (!ble.waitForOK()) {
+      error(F("Failed to send"));
+    }
   }
 }
 
